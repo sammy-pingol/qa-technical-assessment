@@ -1,0 +1,51 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Both targets are live third-party systems. A nightly run surfaces
+    # breakage caused by their changes rather than by ours.
+    - cron: '0 18 * * *'
+
+jobs:
+  api:
+    name: API suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright test --project=api
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-report
+          path: playwright-report/
+          retention-days: 14
+
+  web:
+    name: Web suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --project=web
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-report
+          path: playwright-report/
+          retention-days: 14
