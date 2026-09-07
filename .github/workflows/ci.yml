@@ -68,3 +68,27 @@ jobs:
           name: web-report
           path: playwright-report/
           retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # The executable defect report. This job is EXPECTED TO FAIL — one failure per
+  # open defect in the API — so it is marked continue-on-error and does not gate
+  # anything. It exists to make the current bug count visible on every run.
+  #
+  # A test going green here means the API was fixed and the matching entry in
+  # docs/defects.md can be closed.
+  # ---------------------------------------------------------------------------
+  defects:
+    name: Known defects (informational — expected to fail)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Report open defects
+        continue-on-error: true
+        run: npx playwright test --project=defects

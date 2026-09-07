@@ -89,11 +89,14 @@ to an agreed SLO and assert a percentile across many calls rather than one sampl
 ## Known defects — asserting the behaviour the API should have
 File: `tests/api/known-defects.spec.ts`
 
-Twelve cases, one per defect, each asserting the CORRECT behaviour and marked
-`test.fail()`. They fail today (that is the point) and are reported as expected
-failures, so the run stays green. If any defect is fixed upstream its test starts
-passing, which Playwright reports as a failure — the build goes red and the
-workaround gets retired.
+Twelve cases, one per defect, each asserting the CORRECT behaviour. **They fail
+today, and that is the point** — a red result means something is wrong, and
+twelve things are. Run them with `npm run test:defects`.
+
+They are a separate Playwright project and are NOT part of `npm test`, so the
+functional suites stay green and a genuinely new regression cannot hide among
+twelve permanent failures. When a defect is fixed its test goes green and the
+entry in `docs/defects.md` can be closed.
 
 | ID | Asserts the API should… | Actual |
 |----|-------------------------|--------|

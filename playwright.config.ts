@@ -50,6 +50,30 @@ export default defineConfig({
     {
       name: 'api',
       testDir: './tests/api',
+      // The known-defects suite is its own project — see below.
+      testIgnore: /known-defects\.spec\.ts/,
+      use: {
+        baseURL: API_BASE_URL,
+        extraHTTPHeaders: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      },
+    },
+    {
+      /**
+       * The executable defect report. EXPECTED TO FAIL — one failure per open
+       * defect — which is why it is a separate project and is not part of
+       * `npm test`.
+       *
+       * Run it with `npm run test:defects`. A test going green here means the
+       * API was fixed and the corresponding entry in docs/defects.md can be
+       * closed.
+       *
+       * No retries: these failures are the deterministic, expected result, and
+       * retrying them would only waste time.
+       */
+      name: 'defects',
+      testDir: './tests/api',
+      testMatch: /known-defects\.spec\.ts/,
+      retries: 0,
       use: {
         baseURL: API_BASE_URL,
         extraHTTPHeaders: { 'Content-Type': 'application/json', Accept: 'application/json' },

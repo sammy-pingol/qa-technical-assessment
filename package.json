@@ -4,9 +4,10 @@
   "private": true,
   "description": "Web (cheapflights.com.au) and API (restful-booker) test automation — Playwright + TypeScript",
   "scripts": {
-    "test": "playwright test",
+    "test": "playwright test --project=api --project=web --project=web-mobile",
     "test:web": "playwright test --project=web",
     "test:api": "playwright test --project=api",
+    "test:defects": "playwright test --project=defects",
     "test:mobile": "playwright test --project=web-mobile",
     "test:headed": "playwright test --project=web --headed",
     "test:ui": "playwright test --ui",

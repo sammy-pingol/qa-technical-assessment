@@ -7,24 +7,23 @@ written up, and every one is referenced from the automated test that covers it
 
 **Every defect below is executable.** Two suites cover them from opposite sides:
 
-| Suite | Asserts | Purpose |
-|-------|---------|---------|
-| The functional specs | what the API does **today**, with a `flagDefect()` annotation naming the deviation | A regression net — a silent behaviour change fails a test |
-| `tests/api/known-defects.spec.ts` | what the API **should** do, each marked `test.fail()` | Documents the correct contract, and goes red the day a defect is fixed |
+| Suite | Command | Asserts | Expected state |
+|-------|---------|---------|----------------|
+| Functional specs | `npm test` | what the API does **today**, with a `flagDefect()` annotation | **Green** — red means something new broke |
+| `known-defects.spec.ts` | `npm run test:defects` | what the API **should** do | **Red** — one failure per open defect |
 
-Why both. Asserting only the correct behaviour would leave twelve permanently
-red tests, and a suite that is always red gets ignored — at which point it
-catches nothing. Asserting only the actual behaviour writes the bug into the
-test, so a stranger reading `toBe(200)` sees a test that endorses it.
+The second suite fails, deliberately. A red result means something is wrong, and
+twelve things are wrong; dressing those failures up as passes would be dishonest
+to anyone reading the report. When a defect is fixed, its test simply goes green
+and the entry here can be closed — no annotation to retire, no inverted signal.
 
-`test.fail()` resolves this. Playwright treats a test marked expected-to-fail as
-passing while it fails, and reports it as a **failure if it ever passes**. So the
-build stays green today, the assertions state the correct contract, and the
-moment any of these is fixed upstream the build goes red and forces someone to
-retire the workaround.
+They are separate Playwright projects, and `npm test` does not include the defect
+suite. That separation is what stops twelve permanent failures from drowning out
+a thirteenth, genuinely new one — which is the usual argument for hiding known
+failures, and is better solved by keeping them apart.
 
-This was verified rather than assumed: temporarily changing DEFECT-001 to assert
-the actual `200` made the run report `1 failed`.
+Verified both directions: the defect suite reports `12 failed`, and temporarily
+asserting the actual `200` in DEFECT-001 makes it `11 failed, 1 passed`.
 
 Severity uses: **High** — data loss, corruption or a security exposure.
 **Medium** — a contract violation a client must work around. **Low** — cosmetic

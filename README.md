@@ -22,6 +22,7 @@ npm test
 |---------|-------------|
 | `npm test` | Both suites |
 | `npm run test:api` | API suite only — no browser needed, runs in seconds |
+| `npm run test:defects` | The executable defect report — **expected to fail**, one per open bug |
 | `npm run test:web` | Web suite only, headless Chromium |
 | `npm run test:headed` | Web suite with a visible browser |
 | `npm run test:mobile` | Header suite against a Pixel 5 profile |
@@ -58,23 +59,28 @@ The four skips are deliberate and each names its reason in the report:
 | TC-W-004, TC-W-005, TC-W-009 (mobile only) | The account control collapses into the navigation drawer at mobile width, so "Sign in is flush right of the logo" is not meaningful there. TC-W-009 resizes to 375px, which the mobile project is already at. |
 | TC-W-041 or TC-W-046 | The results page is A/B tested. One variant ships no "N of M flights" counter and no desktop Direct filter; whichever is absent on the run skips with a named reason. Asserting a control the product does not always ship would be a false failure. |
 
-### Why the run is green when twelve defects are open
+### The two suites, and why one of them is red on purpose
 
-Two suites cover the defects from opposite sides:
+| Suite | Command | Asserts | Expected |
+|-------|---------|---------|----------|
+| Functional | `npm test` | what the API does **today**, annotated with the defect it deviates on | **Green** — red means something new broke |
+| Known defects | `npm run test:defects` | what the API **should** do | **Red** — one failure per open defect |
 
-- The **functional specs** assert what the API does *today*, each carrying a
-  `flagDefect()` annotation that surfaces in the HTML report. They are the
-  regression net: a silent behaviour change fails a test.
-- **`tests/api/known-defects.spec.ts`** asserts what the API *should* do, each
-  case marked `test.fail()`. They fail today — which is the point — and are
-  reported as expected failures, so the run stays green.
+The defect suite fails deliberately. A red result should mean something is wrong,
+and twelve things are wrong; presenting those as passes would misrepresent the
+API's state to whoever reads the report. When a defect is fixed, its test goes
+green and the entry in `docs/defects.md` closes — nothing to retire, no inverted
+signal to explain.
 
-The payoff is the third state: if a defect is fixed upstream, its test starts
-passing, and Playwright reports an expected-failure-that-passed **as a failure**.
-The build goes red and forces someone to retire the workaround.
+They are separate Playwright projects and `npm test` excludes the defect suite.
+That separation is the point: it keeps twelve permanent, known failures from
+drowning out a thirteenth, genuinely new one. In CI the defect job runs as
+`continue-on-error`, so the bug count is visible on every run without gating the
+build.
 
-Verified rather than assumed: temporarily changing DEFECT-001 to assert the
-actual `200` made the run report `1 failed`.
+Verified in both directions: the defect suite reports `12 failed`, and
+temporarily asserting the actual `200` in DEFECT-001 makes it `11 failed,
+1 passed`.
 
 ---
 
