@@ -36,6 +36,7 @@ File: `tests/web/flight-search.spec.ts`
 | TC-W-026 | N | Search with no destination returns no results | 1. Set origin 2. Set **valid dates** 3. Submit | **No open tab** reaches a results URL within 15s, **and** the search form is still displayed |
 | TC-W-027 | N | Identical origin and destination returns no results | 1. Set Sydney for both 2. Set **valid dates** 3. Submit | **No open tab** reaches a results URL, **and** the search form is still displayed |
 | TC-W-028 | N | Unserved route degrades gracefully | 1. Deep-link a route pair with no service | No unhandled error text is rendered |
+| TC-W-029 | P | Search reaches results; the variant served is recorded | 1. Run a valid SYD→MEL search 2. Inspect every open tab | Always: some tab carries `/flight-search/SYD-MEL/...`, and the report is annotated with which variant was served. Additionally, when the new-tab variant is served: the submitted tab's host is no longer `cheapflights.com.au` |
 
 > **Why 021/022/023 share one journey.** They assert three properties of a single
 > completed search. Run as three tests they drove the same four-field form

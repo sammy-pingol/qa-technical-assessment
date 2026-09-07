@@ -46,8 +46,14 @@ Last full run — `npm test`, Chromium, macOS, 3 workers:
   (3.0 minutes)
 ```
 
-`npm test` runs **77 tests** across three projects: **37 API** tests (no browser,
-~8s), **30 web** tests, and **10 of the header tests re-run against a Pixel 5
+That run was taken at commit `90ffde0`, before `TC-W-029` was added. With it the
+suite collects **78**, and a clean run lands at **73-75 passed / 3-5 skipped / 0
+failed** — the variation is which A/B tested results-page controls the site
+serves (`TC-W-041`, `TC-W-046`), plus three deliberate mobile skips. A range is
+the honest figure here: the site does not serve every run the same page.
+
+`npm test` runs **78 tests** across three projects: **37 API** tests (no browser,
+~8s), **31 web** tests, and **10 of the header tests re-run against a Pixel 5
 profile**. The 12 known-defect tests are a fourth project and are deliberately
 excluded — run them with `npm run test:defects`, where they are expected to fail.
 

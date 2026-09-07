@@ -132,6 +132,68 @@ test.describe('Flight search', () => {
     await expect(home.searchForm, 'an invalid trip should leave the user on the search form').toBeVisible();
   });
 
+  /**
+   * TC-W-029 — the search handoff, and which variant this run was served.
+   *
+   * MECHANISM (from the site's own call stack, captured live):
+   *   onFormClick  ->  r.start  ->  n.open  ->  window.open(resultsUrl, '_blank')
+   * The results open in a NEW tab by design, and the tab the search was
+   * submitted from is then handed to a paid affiliate about 5s later —
+   * observed as secure.flightcentre.com.au (utm_source=kayak) and au.trip.com.
+   *
+   * The site does not do this on every session, and the trigger is NOT
+   * identified. Measured: 2/2 when a human drove the browser, 0/10 when a
+   * script drove the same kind of browser, 3/27 across earlier suite runs.
+   * Behavioural signals are suspected and UNPROVEN (docs/site-recon.md,
+   * finding 11).
+   *
+   * So this test does not skip. It always asserts what holds in BOTH variants —
+   * a valid search reaches the searched route — and RECORDS which variant it
+   * was served as an annotation in the HTML report. The affiliate assertion
+   * runs only when the handoff actually occurred.
+   *
+   * Recording rather than skipping means every run contributes a data point on
+   * how often the variant appears, instead of going quiet.
+   */
+  test('TC-W-029 (P) a completed search reaches results, and the variant served is recorded', async ({ home, page }, testInfo) => {
+    const resultsTab = await home.searchFlights(SYDNEY, MELBOURNE);
+    expect(resultsTab, 'a valid search should reach results in some tab').not.toBeNull();
+
+    const hostOf = (target: typeof page): string => {
+      try {
+        return new URL(target.url()).hostname;
+      } catch {
+        return '(unavailable)';
+      }
+    };
+
+    const openedNewTab = resultsTab !== page;
+    testInfo.annotations.push({
+      type: 'search variant',
+      description: openedNewTab
+        ? `results opened in a NEW tab; the submitted tab was handed to ${hostOf(page)}`
+        : 'results opened in the SAME tab; no affiliate handoff on this run',
+    });
+
+    // True in both variants — this is the property under test.
+    await expect(resultsTab!, 'the results should carry the searched route').toHaveURL(/\/flight-search\/SYD-MEL\//);
+
+    /**
+     * Only meaningful when the handoff was served. Polled, because the redirect
+     * arrives a few seconds after the results do. Asserted as "no longer
+     * cheapflights" rather than as a named partner: the affiliate varies, so
+     * naming one would pass today and fail on the next handoff.
+     */
+    if (openedNewTab) {
+      await expect
+        .poll(() => hostOf(page), {
+          message: 'the submitted tab should be handed to a third party',
+          timeout: 20_000,
+        })
+        .not.toMatch(/cheapflights\.com\.au$/);
+    }
+  });
+
   test('TC-W-028 (N) a route with no service still degrades gracefully rather than erroring', async ({ results, page }) => {
     // Two small regional airports with no direct commercial pairing.
     await results.openSearch('BHS', 'LSY', futureDate(30), futureDate(37));

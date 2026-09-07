@@ -159,8 +159,8 @@ Consequences:
 
 
 ## Finding 11 — submitting the search does not always keep you on cheapflights
-Roughly **1 attempt in 10**, a completed search does NOT navigate the tab it was
-submitted from. Instead:
+A completed search sometimes does NOT navigate the tab it was submitted from.
+Instead:
 
   - the results open in a **NEW tab**, on the normal route
     `cheapflights.com.au/flight-search/SYD-MEL/2026-10-07/2026-10-14/2adults?...`
@@ -168,10 +168,53 @@ submitted from. Instead:
       secure.flightcentre.com.au/.../results?utm_source=kayak&utm_medium=aggregators&utm_campaign=compare-to-frontdoor
       au.trip.com/flights/Sydney-to-Melbourne/tickets-SYD-MEL?...
 
-Measured at 3 failures in 27 attempts with retries disabled, and confirmed by
-hand in a browser — the manual reproduction is what identified the mechanism.
-The automated failure alone looked like "the site moved its results page", which
-was wrong.
+MECHANISM — captured from the site's own call stack by hooking window.open:
+
+    onFormClick  ->  r.start  ->  n.open  ->  window.open(resultsUrl, '_blank')
+    (content.r9cdn.net/frontier/assets/<hashed>.js)
+
+So the new tab is deliberate site behaviour, not a redirect or a site change.
+The submitted tab is then navigated to the affiliate ~5s later.
+
+FREQUENCY DEPENDS ON HOW THE FORM IS DRIVEN, and that gap is the finding.
+
+  human driving the browser      2 / 2      (Playwright-controlled browser,
+                                            clicked by hand)
+  script driving the browser     0 / 10     (same browser, same route, dates
+                                            and passenger count)
+  earlier full-suite runs        3 / 27     (retries disabled)
+
+RULED OUT as the cause of the gap:
+  - headless vs headed              identical, 3/3
+  - fresh vs persistent profile     identical
+  - repeat searches in one session  identical, 3 rounds
+  - a slow redirect being missed    no: it lands ~5s later; watched every second
+                                    for 60s, six times, and it never moved
+  - passenger count and dates       no: a script reproducing the exact URL
+                                    (SYD-MEL, same dates, /2adults) did not hand off
+
+NOT IDENTIFIED: the actual trigger. Behavioural signals are suspected — the
+human runs involved real cursor movement and ~44s of interaction, the scripted
+runs ~12s with none — but this is UNPROVEN and should be stated as such.
+
+An earlier draft of this finding claimed the site withholds handoffs from
+traffic it fingerprints as automated. That is FALSE and is recorded here so the
+mistake is not repeated: the human-driven reproduction ran inside a
+Playwright-controlled browser, which disproves it.
+
+The experiment assignment appears to travel in KAYAK's `mst_*` cookies
+(`mst_client`, `mst_iBfK2w`, `mst_ADIrlA` — names stable across sessions, values
+sharing repeated group segments). Forcing it was NOT pursued: it would couple
+the suite to an undocumented internal experiment id, the same fragility this
+document rejects for build-hashed CSS classes.
+
+The manual reproduction is what identified the mechanism. The automated failure
+alone looked like "the site moved its results page", which was wrong.
+
+COST NOTE: identifying the above took roughly sixty automated searches against a
+live production site, which eventually triggered its bot defence
+(/security/check) and temporarily broke the web suite from that IP. Investigating
+a third-party system has a traffic budget; this exceeded it.
 
 Consequences:
   - `HomePage.submitAndAwaitResults()` polls EVERY open tab and returns the one
@@ -186,6 +229,10 @@ Consequences:
     They now check every tab AND assert positively that the search form is still
     displayed, which is an observable capable of failing on its own.
 
-The general lesson: retries hid this for days. At ~10% per attempt with two
-retries in CI, a reported failure needs three consecutive misses — about 1 run
-in 580. It only surfaced on a run with retries disabled.
+  - TC-W-029 records which variant each run was served, as an annotation in the
+    HTML report, and asserts the handoff only when it occurred. It does not skip:
+    every run contributes a data point on how often the variant appears.
+
+The general lesson: retries hid this for days. At the rate automation encounters
+it, with two retries in CI a reported failure needs three consecutive misses. It
+only surfaced on a run with retries disabled.

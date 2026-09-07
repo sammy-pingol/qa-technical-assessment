@@ -7,7 +7,7 @@ Assessment requirement → test case → implementing spec.
 | Requirement (from the brief) | Test cases | Spec file |
 |------------------------------|-----------|-----------|
 | 1a — Validate the logo and login button are displayed | TC-W-001 … TC-W-010 | `tests/web/header.spec.ts` |
-| 1b — Tests for searching flights | TC-W-020, TC-W-021/022/023 (one journey), TC-W-024 … TC-W-028 | `tests/web/flight-search.spec.ts` |
+| 1b — Tests for searching flights | TC-W-020, TC-W-021/022/023 (one journey), TC-W-024 … TC-W-029 | `tests/web/flight-search.spec.ts` |
 | 1c — Assertions for flight search results | TC-W-040 … TC-W-048, plus sorting TC-W-049 … TC-W-052 | `tests/web/search-results.spec.ts` |
 | 2a — CreateBooking with response field assertions | TC-A-010 … TC-A-019 | `tests/api/create-booking.spec.ts` |
 | 2b — UpdateBooking with response field assertions | TC-A-020 … TC-A-026 | `tests/api/update-booking.spec.ts` |
