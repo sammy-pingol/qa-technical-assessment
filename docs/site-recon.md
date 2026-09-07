@@ -156,3 +156,36 @@ Consequences:
     does not offer the element. A skip that names the variant is honest; a
     hard-coded assertion against a control the product does not always ship
     would be a false failure that erodes trust in the suite.
+
+
+## Finding 11 — submitting the search does not always keep you on cheapflights
+Roughly **1 attempt in 10**, a completed search does NOT navigate the tab it was
+submitted from. Instead:
+
+  - the results open in a **NEW tab**, on the normal route
+    `cheapflights.com.au/flight-search/SYD-MEL/2026-10-07/2026-10-14/2adults?...`
+  - the **original** tab is handed to a paid affiliate. The affiliate VARIES:
+      secure.flightcentre.com.au/.../results?utm_source=kayak&utm_medium=aggregators&utm_campaign=compare-to-frontdoor
+      au.trip.com/flights/Sydney-to-Melbourne/tickets-SYD-MEL?...
+
+Measured at 3 failures in 27 attempts with retries disabled, and confirmed by
+hand in a browser — the manual reproduction is what identified the mechanism.
+The automated failure alone looked like "the site moved its results page", which
+was wrong.
+
+Consequences:
+  - `HomePage.submitAndAwaitResults()` polls EVERY open tab and returns the one
+    that reached the results route, rather than watching only the submitted tab.
+  - It keys on OUR results route, never on the affiliate's domain. A check for
+    `flightcentre.com.au` would have passed today and broken on the Trip.com
+    handoff. The property that holds is "some open tab reached our route".
+  - TC-W-021/022/023 assert against the returned tab, not the submitted one.
+  - TC-W-026 and TC-W-027 were the serious casualty. They proved "no results" by
+    the ABSENCE of a results URL on the submitted tab — and once a SUCCESSFUL
+    search stopped producing that URL there either, they could no longer fail.
+    They now check every tab AND assert positively that the search form is still
+    displayed, which is an observable capable of failing on its own.
+
+The general lesson: retries hid this for days. At ~10% per attempt with two
+retries in CI, a reported failure needs three consecutive misses — about 1 run
+in 580. It only surfaced on a run with retries disabled.

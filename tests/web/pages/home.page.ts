@@ -34,6 +34,9 @@ export function calendarDayLabel(date: Date): string {
 const ORIGIN_LISTBOX = 'flight-origin-smarty-input-list';
 const DESTINATION_LISTBOX = 'flight-destination-smarty-input-list';
 
+/** The route that marks a search as having actually landed on results. */
+const RESULTS_ROUTE = /\/flight-search\//;
+
 /**
  * cheapflights.com.au home page.
  *
@@ -247,15 +250,51 @@ export class HomePage extends BasePage {
     await this.searchButton.click();
   }
 
-  /** Submit and wait for the results route. Returns false if we never left the form. */
-  async submitAndAwaitResults(timeout = 60_000): Promise<boolean> {
+  /**
+   * Submit, and return the TAB the results actually landed in — or null if no
+   * open tab ever reached the results route.
+   *
+   * Watching only `this.page` was wrong, and wrong in a way that hid itself.
+   * The site A/B tests where a completed search lands: usually it navigates
+   * this tab, but in one variant (~1 attempt in 10) it opens the results in a
+   * NEW tab and hands THIS tab off to a paid affiliate — observed as both
+   * secure.flightcentre.com.au and au.trip.com.
+   *
+   * Two consequences, and the second is the dangerous one:
+   *   - a genuinely successful search was reported as "no results" (TC-W-021);
+   *   - the NEGATIVE tests became unable to fail, because a successful search
+   *     no longer changed this tab's URL either, so "this tab is not on a
+   *     results URL" stopped distinguishing success from correct rejection.
+   *
+   * Reproduced by hand in a browser before this was written.
+   */
+  async submitAndAwaitResults(timeout = 60_000): Promise<Page | null> {
+    const context = this.page.context();
     await this.submit();
-    try {
-      await this.page.waitForURL(/\/flight-search\//, { timeout });
-      return true;
-    } catch {
-      return false;
+
+    /**
+     * Poll EVERY open tab, not just the one we submitted from, and key on the
+     * cheapflights results route rather than on the partner's domain.
+     *
+     * That last point matters: the tab we submitted from is handed to a paid
+     * affiliate, and WHICH affiliate varies — secure.flightcentre.com.au
+     * (?utm_source=kayak&utm_campaign=compare-to-frontdoor) on one attempt,
+     * au.trip.com on another. Recognising a fixed partner domain would pass
+     * today and break on the next partner. "Some open tab reached OUR results
+     * route" is the property that actually holds.
+     *
+     * Polling rather than waitForEvent('page') is deliberate too: that helper
+     * resolves on the FIRST new tab, which an ad popup would win.
+     */
+    const deadline = Date.now() + timeout;
+    while (Date.now() < deadline) {
+      const landed = context.pages().find((candidate) => RESULTS_ROUTE.test(candidate.url()));
+      if (landed !== undefined) {
+        return landed;
+      }
+      await this.page.waitForTimeout(250);
     }
+    return null;
   }
 
   async searchFlights(
@@ -263,7 +302,7 @@ export class HomePage extends BasePage {
     to: LocationQuery,
     departure: Date = daysFromToday(30),
     returning: Date = daysFromToday(37),
-  ): Promise<boolean> {
+  ): Promise<Page | null> {
     await this.setOrigin(from);
     await this.setDestination(to);
     await this.setTripDates(departure, returning);

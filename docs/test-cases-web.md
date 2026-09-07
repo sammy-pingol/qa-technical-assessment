@@ -30,11 +30,11 @@ File: `tests/web/flight-search.spec.ts`
 | ID | Type | Title | Steps | Expected result |
 |----|------|-------|-------|-----------------|
 | TC-W-020 | P | Search form exposes all trip inputs | 1. Open home | Origin, destination, departure date, return date and Search are all visible; Search is enabled |
-| TC-W-021, TC-W-022, TC-W-023 | P | A Sydney → Melbourne search reaches results that echo the route | 1. Set origin Sydney 2. Set destination Melbourne 3. Pick departure +30d and return +37d in the calendar 4. Search | **021**: navigates to `/flight-search/SYD-MEL/...` and at least one result renders · **022**: the origin and destination controls carry "Sydney" and "Melbourne" in their accessible names · **023**: document title matches `SYD to MEL` |
+| TC-W-021, TC-W-022, TC-W-023 | P | A Sydney → Melbourne search reaches results that echo the route | 1. Set origin Sydney 2. Set destination Melbourne 3. Pick departure +30d and return +37d in the calendar 4. Search | **021**: reaches `/flight-search/SYD-MEL/...` — in the tab submitted from *or* a newly opened one — and at least one result renders · **022**: the origin and destination controls carry "Sydney" and "Melbourne" in their accessible names · **023**: document title matches `SYD to MEL` |
 | TC-W-024 | P | Swap reverses origin and destination | 1. Set Sydney → Melbourne 2. Click swap | Origin reads Melbourne, destination reads Sydney |
 | TC-W-025 | N | Unrecognised destination offers no suggestion | 1. Type "Zzzzqqqx Not An Airport" into destination | Zero autocomplete options are offered |
-| TC-W-026 | N | Search with no destination returns no results | 1. Set origin 2. Set **valid dates** 3. Submit | No navigation to a results URL within 15s |
-| TC-W-027 | N | Identical origin and destination returns no results | 1. Set Sydney for both 2. Set **valid dates** 3. Submit | No navigation to a `SYD-SYD` results URL |
+| TC-W-026 | N | Search with no destination returns no results | 1. Set origin 2. Set **valid dates** 3. Submit | **No open tab** reaches a results URL within 15s, **and** the search form is still displayed |
+| TC-W-027 | N | Identical origin and destination returns no results | 1. Set Sydney for both 2. Set **valid dates** 3. Submit | **No open tab** reaches a results URL, **and** the search form is still displayed |
 | TC-W-028 | N | Unserved route degrades gracefully | 1. Deep-link a route pair with no service | No unhandled error text is rendered |
 
 > **Why 021/022/023 share one journey.** They assert three properties of a single
@@ -42,6 +42,17 @@ File: `tests/web/flight-search.spec.ts`
 > against the live site three times, which tripled the load for no extra coverage
 > and was this suite's largest source of flakiness. Soft assertions preserve the
 > per-property diagnostics.
+
+> **Why these assertions say "no open tab".** The site A/B tests where a
+> completed search lands. Usually it navigates the same tab; in one variant
+> (~1 attempt in 10) it opens the results in a NEW tab and hands the original
+> tab to a paid affiliate — observed as both `secure.flightcentre.com.au`
+> (`utm_source=kayak`) and `au.trip.com`. Checking only the submitted tab
+> therefore reported a successful search as a failure, and — more seriously —
+> left TC-W-026 and TC-W-027 unable to fail, because a successful search no
+> longer changed that tab's URL either. Both now check every open tab, and both
+> add a positive assertion (the search form is still displayed) that is capable
+> of failing on its own.
 
 > **Why TC-W-026 and TC-W-027 set dates.** In a fresh browser context both date
 > fields are empty and the form refuses to submit at all. Without valid dates

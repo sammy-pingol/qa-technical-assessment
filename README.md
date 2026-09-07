@@ -40,14 +40,19 @@ No configuration is required — both base URLs have working defaults. Copy
 Last full run — `npm test`, Chromium, macOS, 3 workers:
 
 ```
-  85 passed
+  73 passed
    4 skipped
    0 failed
-  (2.7 minutes)
+  (3.0 minutes)
 ```
 
-89 executions across three projects: **49 API** tests (no browser, ~8s), **30 web**
-tests, and **10 of the header tests re-run against a Pixel 5 profile**.
+`npm test` runs **77 tests** across three projects: **37 API** tests (no browser,
+~8s), **30 web** tests, and **10 of the header tests re-run against a Pixel 5
+profile**. The 12 known-defect tests are a fourth project and are deliberately
+excluded — run them with `npm run test:defects`, where they are expected to fail.
+
+Skips vary between **4 and 5** depending on which results-page variant the site
+serves; the table below says why.
 
 **81 documented cases** — 32 web, 37 API, and 12 executable defect cases. 27 are
 negative.
@@ -57,7 +62,7 @@ The four skips are deliberate and each names its reason in the report:
 | Skipped | Why |
 |---------|-----|
 | TC-W-004, TC-W-005, TC-W-009 (mobile only) | The account control collapses into the navigation drawer at mobile width, so "Sign in is flush right of the logo" is not meaningful there. TC-W-009 resizes to 375px, which the mobile project is already at. |
-| TC-W-041 or TC-W-046 | The results page is A/B tested. One variant ships no "N of M flights" counter and no desktop Direct filter; whichever is absent on the run skips with a named reason. Asserting a control the product does not always ship would be a false failure. |
+| TC-W-041 and/or TC-W-046 | The results page is A/B tested. One variant ships no "N of M flights" counter and no desktop Direct filter; whichever is absent on the run skips with a named reason. Asserting a control the product does not always ship would be a false failure. |
 
 ### The two suites, and why one of them is red on purpose
 
@@ -170,7 +175,8 @@ test for the accessibility layer. The evidence behind all of this is captured in
 
 ### 2. The API suite asserts actual behaviour and flags the deviations
 
-Twelve endpoints deviate from HTTP convention or from their own documentation —
+Twelve behaviours across five endpoints deviate from HTTP convention or from
+their own documentation —
 `DELETE` answers `201 Created`, a malformed payload answers `500` instead of
 `400`, `totalprice: "abc"` is silently stored as `null`.
 
