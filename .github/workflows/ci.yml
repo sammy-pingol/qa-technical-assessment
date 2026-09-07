@@ -89,6 +89,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # No continue-on-error on the STEP: the step must be allowed to fail so the
+      # job is visibly red and the open-defect count is obvious at a glance.
+      # continue-on-error on the JOB is what stops that failure gating the build.
       - name: Report open defects
-        continue-on-error: true
         run: npx playwright test --project=defects
