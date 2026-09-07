@@ -189,6 +189,25 @@ persistence untyped and unsanitised.
 
 ## CI
 
-`.github/workflows/ci.yml` runs both suites on push, on pull request, and nightly
-— the nightly run exists because a live third-party target can break the suite
-without anyone touching this repository. HTML reports upload as artifacts.
+`.github/workflows/ci.yml` splits the two suites deliberately:
+
+| Suite | Runs on | Why |
+|-------|---------|-----|
+| **API** | every push and pull request | Deterministic, owns its data, ~7s. This is the real gate. |
+| **Web** | nightly + manual dispatch | Drives a live commercial site behind a WAF, with A/B tested layouts and geolocated content. |
+
+**Why the web suite does not gate every push.** A pipeline gate should answer
+"did this change break something?". A suite whose result also depends on a third
+party's availability, rate limiting and experiment bucketing cannot answer that:
+a red build tells you nothing about the commit. And a gate that goes red for
+reasons outside the author's control gets routinely overridden, at which point it
+has stopped being a gate.
+
+This is observed, not theoretical: the suite passes locally under CI settings
+(29 passed, 0 failed) and intermittently fails from a GitHub runner with no code
+change in between. So it runs on a cadence where a failure is **triaged** rather
+than **blocking**, with traces uploaded for exactly that purpose. It can be run
+on demand from the Actions tab at any time.
+
+If this were our own application on our own infrastructure, it would gate every
+push. HTML reports upload as artifacts from both jobs.
