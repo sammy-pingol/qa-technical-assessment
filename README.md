@@ -39,22 +39,23 @@ No configuration is required — both base URLs have working defaults. Copy
 Last full run — `npm test`, Chromium, macOS, 3 workers:
 
 ```
-  66 passed
-   4 skipped
+  72 passed
+   5 skipped
    0 failed
-  (2.4 minutes)
+  (3.4 minutes)
 ```
 
-70 executions across three projects: **34 API** tests (no browser, ~7s), **28 web**
+77 executions across three projects: **37 API** tests (no browser, ~7s), **30 web**
 tests, and **10 of the header tests re-run against a Pixel 5 profile**.
 
-The four skips are deliberate and each names its reason in the report:
+The five skips are deliberate and each names its reason in the report:
 
 | Skipped | Why |
 |---------|-----|
-| TC-W-004, TC-W-005 (mobile only) | The account control collapses into the navigation drawer at mobile width, so "Sign in is flush right of the logo" is not a meaningful assertion there. |
-| TC-W-009 (mobile only) | It resizes the viewport to 375px — already the case in the `web-mobile` project. |
-| TC-W-041 | The results page is A/B tested and one variant ships no "N of M flights" counter at all. Skipping with a named reason is honest; asserting a control the product does not always ship would be a false failure. |
+| TC-W-004, TC-W-005, TC-W-009 (mobile only) | The account control collapses into the navigation drawer at mobile width, so "Sign in is flush right of the logo" is not meaningful there. TC-W-009 resizes to 375px, which the mobile project is already at. |
+| TC-W-041, TC-W-046 | The results page is A/B tested. One variant ships no "N of M flights" counter and no desktop Direct filter. Skipping with a named reason is honest; asserting a control the product does not always ship would be a false failure. |
+
+**69 documented test cases** — 32 web, 37 API — of which 27 are negative.
 
 ---
 

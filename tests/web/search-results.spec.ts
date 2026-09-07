@@ -146,6 +146,81 @@ test.describe('Flight search results', () => {
   });
 });
 
+/**
+ * Sorting — part of case study 1c, "develop assertions for flight search
+ * results". Ordering is a property of the result set as a whole rather than of
+ * any one card, so it gets its own group.
+ *
+ * The assertion is on the ORDER, not on specific prices or durations: live
+ * inventory changes hourly, so "the third result costs $322" would be worthless
+ * within the hour, while "each result costs at least as much as the one above
+ * it" is true for as long as the feature works.
+ */
+test.describe('Flight search results — sorting', () => {
+  const ORIGIN = 'SYD';
+  const DESTINATION = 'MEL';
+
+  test('TC-W-049 (P) sorting by cheapest returns prices in ascending order', async ({ results }) => {
+    await results.openSearch(ORIGIN, DESTINATION, futureDate(30), futureDate(37), 'price_a');
+    await results.waitForResults();
+
+    const prices = (await results.readResults(8)).map((flight) => flight.price);
+    const known = prices.filter((price): price is number => price !== null);
+
+    expect(known.length, 'prices should be parseable from the sorted results').toBeGreaterThan(1);
+    for (let index = 1; index < known.length; index += 1) {
+      expect.soft(
+        known[index],
+        `result ${index + 1} ($${known[index]}) should cost at least as much as result ${index} ($${known[index - 1]}) when sorted by cheapest`,
+      ).toBeGreaterThanOrEqual(known[index - 1]);
+    }
+  });
+
+  test('TC-W-050 (P) sorting by quickest returns durations in ascending order', async ({ results }) => {
+    await results.openSearch(ORIGIN, DESTINATION, futureDate(30), futureDate(37), 'duration_a');
+    await results.waitForResults();
+
+    const durations = (await results.readResults(8))
+      .map((flight) => flight.totalDurationMinutes)
+      .filter((minutes) => minutes > 0);
+
+    expect(durations.length, 'durations should be parseable from the sorted results').toBeGreaterThan(1);
+    for (let index = 1; index < durations.length; index += 1) {
+      expect.soft(
+        durations[index],
+        `result ${index + 1} (${durations[index]}min) should take at least as long as result ${index} (${durations[index - 1]}min) when sorted by quickest`,
+      ).toBeGreaterThanOrEqual(durations[index - 1]);
+    }
+  });
+
+  test('TC-W-051 (P) the cheapest sort surfaces a fare no higher than the default sort', async ({ results }) => {
+    await results.openSearch(ORIGIN, DESTINATION, futureDate(30), futureDate(37), 'bestflight_a');
+    await results.waitForResults();
+    const defaultTop = (await results.readResults(1))[0]?.price;
+
+    await results.openSearch(ORIGIN, DESTINATION, futureDate(30), futureDate(37), 'price_a');
+    await results.waitForResults();
+    const cheapestTop = (await results.readResults(1))[0]?.price;
+
+    expect(defaultTop, 'the default sort should surface a priced result').not.toBeNull();
+    expect(cheapestTop, 'the cheapest sort should surface a priced result').not.toBeNull();
+
+    // The whole point of a "cheapest" sort: its top result cannot cost more.
+    expect(
+      cheapestTop!,
+      `sorting by cheapest ($${cheapestTop}) must not surface a dearer top fare than the default sort ($${defaultTop})`,
+    ).toBeLessThanOrEqual(defaultTop!);
+  });
+
+  test('TC-W-052 (N) an unrecognised sort value does not break the results page', async ({ results, page }) => {
+    await results.openSearch(ORIGIN, DESTINATION, futureDate(30), futureDate(37), 'not_a_real_sort');
+
+    // Degrade gracefully: fall back to some ordering, never error.
+    await results.waitForResults();
+    await expect(page.locator('body')).not.toContainText(/(unexpected error|something went wrong|500 internal)/i);
+  });
+});
+
 function shiftDate(days: number): string {
   const date = new Date();
   date.setDate(date.getDate() + days);

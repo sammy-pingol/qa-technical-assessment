@@ -6,6 +6,8 @@ export interface FlightResult {
   raw: string;
   price: number | null;
   durations: string[];
+  /** Both legs summed, in minutes — a single comparable number for sort checks. */
+  totalDurationMinutes: number;
   stops: string[];
   times: string[];
   airportCodes: string[];
@@ -23,8 +25,28 @@ export interface FlightResult {
  * `e2GB` is a rotating build hash and `-price-text` is the stable, human-authored
  * part. Matching the suffix survives a redeploy; matching the whole class does not.
  */
+/**
+ * The site sorts via a URL parameter. Driving sort through the URL rather than
+ * the on-page control is deliberate: the control is rendered as tabs in one
+ * layout variant and as a combobox in another (docs/site-recon.md, finding 10),
+ * so a UI-driven sort test would fail on whichever variant it was not written
+ * against — while the ordering behaviour under test is identical either way.
+ */
+export type SortOrder = 'bestflight_a' | 'price_a' | 'duration_a';
+
 /** "1h 40m" / "2h" — the marker that distinguishes a flight card from an ad. */
 const DURATION = /\d+h\s?\d*m/;
+
+/**
+ * The same pattern, global, for collecting EVERY leg on a card.
+ *
+ * These must stay separate. Without /g, String.match returns only the first
+ * match — which silently made a return trip's "total" duration the outbound leg
+ * alone, and only surfaced when the quickest-sort assertion disagreed with the
+ * site. The non-global form is kept for the card locator, because a stateful
+ * global regex reused across matches carries lastIndex between calls.
+ */
+const DURATION_ALL = /\d+h\s?\d*m/g;
 
 /**
  * IATA codes render glued to the airport name — "SYDKingsford Smith" — so a
@@ -89,8 +111,14 @@ export class ResultsPage extends BasePage {
   }
 
   /** Navigate straight to a dated search. Used where driving the calendar drawer would add fragility without adding coverage — see docs/test-plan.md §5. */
-  async openSearch(origin: string, destination: string, departISO: string, returnISO: string): Promise<void> {
-    await this.page.goto(`/flight-search/${origin}-${destination}/${departISO}/${returnISO}?sort=bestflight_a`, {
+  async openSearch(
+    origin: string,
+    destination: string,
+    departISO: string,
+    returnISO: string,
+    sort: SortOrder | string = 'bestflight_a',
+  ): Promise<void> {
+    await this.page.goto(`/flight-search/${origin}-${destination}/${departISO}/${returnISO}?sort=${sort}`, {
       waitUntil: 'domcontentloaded',
     });
     await this.dismissOverlays();
@@ -137,16 +165,27 @@ export class ResultsPage extends BasePage {
         .replace(SKIP_LINKS, '')
         .replace(/\s+/g, ' ')
         .trim();
+      const durations = raw.match(DURATION_ALL) ?? [];
       results.push({
         raw,
         price: this.extractPrice(raw),
-        durations: raw.match(DURATION) ?? [],
+        durations,
+        totalDurationMinutes: durations.reduce((total, text) => total + this.toMinutes(text), 0),
         stops: raw.match(/direct|\d+\s+stops?/gi) ?? [],
         times: raw.match(/\b\d{1,2}:\d{2}\b/g) ?? [],
         airportCodes: [...new Set(raw.match(AIRPORT_CODE) ?? [])],
       });
     }
     return results;
+  }
+
+  /** "1h 40m" -> 100, "2h" -> 120. */
+  private toMinutes(text: string): number {
+    const match = text.match(/(\d+)h\s?(\d+)?m?/);
+    if (match === null) {
+      return 0;
+    }
+    return Number.parseInt(match[1], 10) * 60 + (match[2] === undefined ? 0 : Number.parseInt(match[2], 10));
   }
 
   private extractPrice(text: string): number | null {

@@ -58,3 +58,16 @@ export function expectBookingEquals(actual: unknown, expected: Booking, context 
     expect(booking.additionalneeds, `${context}.additionalneeds should round-trip unchanged`).toBe(expected.additionalneeds);
   }
 }
+
+/**
+ * Run an API call and report how long it took, in milliseconds.
+ *
+ * Wall-clock from the test's point of view — it includes DNS, TLS and transfer,
+ * which is what a consumer of the API actually experiences, and is the number
+ * worth budgeting against.
+ */
+export async function timed<T>(call: () => Promise<T>): Promise<{ result: T; ms: number }> {
+  const started = Date.now();
+  const result = await call();
+  return { result, ms: Date.now() - started };
+}

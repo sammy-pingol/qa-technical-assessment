@@ -30,7 +30,7 @@ File: `tests/web/flight-search.spec.ts`
 | ID | Type | Title | Steps | Expected result |
 |----|------|-------|-------|-----------------|
 | TC-W-020 | P | Search form exposes all trip inputs | 1. Open home | Origin, destination, departure date, return date and Search are all visible; Search is enabled |
-| TC-W-021 / 022 / 023 | P | A Sydney → Melbourne search reaches results that echo the route | 1. Set origin Sydney 2. Set destination Melbourne 3. Pick departure +30d and return +37d in the calendar 4. Search | **021**: navigates to `/flight-search/SYD-MEL/...` and at least one result renders · **022**: the origin and destination controls carry "Sydney" and "Melbourne" in their accessible names · **023**: document title matches `SYD to MEL` |
+| TC-W-021, TC-W-022, TC-W-023 | P | A Sydney → Melbourne search reaches results that echo the route | 1. Set origin Sydney 2. Set destination Melbourne 3. Pick departure +30d and return +37d in the calendar 4. Search | **021**: navigates to `/flight-search/SYD-MEL/...` and at least one result renders · **022**: the origin and destination controls carry "Sydney" and "Melbourne" in their accessible names · **023**: document title matches `SYD to MEL` |
 | TC-W-024 | P | Swap reverses origin and destination | 1. Set Sydney → Melbourne 2. Click swap | Origin reads Melbourne, destination reads Sydney |
 | TC-W-025 | N | Unrecognised destination offers no suggestion | 1. Type "Zzzzqqqx Not An Airport" into destination | Zero autocomplete options are offered |
 | TC-W-026 | N | Search with no destination returns no results | 1. Set origin 2. Set **valid dates** 3. Submit | No navigation to a results URL within 15s |
@@ -64,3 +64,21 @@ Precondition: a dated SYD→MEL search, departing +30 days, returning +37 days.
 | TC-W-046 | P | Direct filter returns only direct flights | 1. Apply "Direct" 2. Re-read the cards | Every visible card is direct; the shown count does not increase |
 | TC-W-047 | N | An invalid route fabricates no results | 1. Deep-link XXX → YYY | No result card renders; no unhandled error text |
 | TC-W-048 | N | A past departure date is rejected | 1. Deep-link a search departing 30 days ago | No result card renders; no unhandled error text |
+
+## 1c (continued) — Sorting
+File: `tests/web/search-results.spec.ts`, describe block "Flight search results — sorting"
+
+Sorting is driven through the URL parameter rather than the on-page control: that
+control renders as tabs in one layout variant and as a combobox in another
+(`docs/site-recon.md`, finding 10), while the ordering behaviour under test is
+identical either way.
+
+Assertions are on the ORDER, never on specific values — live inventory changes
+hourly, so "the third result costs $322" would be worthless within the hour.
+
+| ID | Type | Title | Steps | Expected result |
+|----|------|-------|-------|-----------------|
+| TC-W-049 | P | Cheapest sort returns ascending prices | 1. Open the search with `sort=price_a` 2. Read the first 8 prices | Each result costs at least as much as the one above it |
+| TC-W-050 | P | Quickest sort returns ascending durations | 1. Open the search with `sort=duration_a` 2. Sum both legs per card | Each result takes at least as long as the one above it |
+| TC-W-051 | P | Cheapest sort surfaces a fare no higher than the default | 1. Read the top fare under `bestflight_a` 2. Read the top fare under `price_a` | The cheapest sort's top fare is less than or equal to the default sort's |
+| TC-W-052 | N | An unrecognised sort value does not break the page | 1. Open the search with `sort=not_a_real_sort` | Results still render; no unhandled error text |

@@ -69,3 +69,19 @@ File: `tests/api/delete-booking.spec.ts`
 | TC-A-044 | N | Delete with a forged token is refused | DELETE with a junk token | 403, and the booking still reads 200 |
 | TC-A-045 | N | Repeat delete is not a fresh success | Delete twice | Second call is not OK — **DEFECT-003** (405, breaking DELETE idempotency) |
 | TC-A-046 | N | Delete of an unknown id is refused | DELETE id 999999999 | Not OK |
+
+## Performance — response-time budgets
+File: `tests/api/performance.spec.ts`
+
+Budgets are deliberately generous (6s write, 4s read). restful-booker is a free
+public sandbox on shared infrastructure; a tight budget would fail on someone
+else's traffic and be muted within a week, which is how performance assertions
+usually die. The goal is to catch a STEP CHANGE — an endpoint that went from ~1s
+to ~8s — not to police latency. Against a service we owned, these would be tied
+to an agreed SLO and assert a percentile across many calls rather than one sample.
+
+| ID | Type | Title | Steps | Expected result |
+|----|------|-------|-------|-----------------|
+| TC-A-050 | P | Auth responds within budget | POST /auth, timed | 200, and under the 6s write budget |
+| TC-A-051 | P | Create responds within budget | POST /booking, timed | Succeeds, and under the 6s write budget |
+| TC-A-052 | P | Read responds within budget, and faster than the write | Seed a booking timed, then GET it timed | 200, under the 4s read budget, and not slower than the write that created it |
