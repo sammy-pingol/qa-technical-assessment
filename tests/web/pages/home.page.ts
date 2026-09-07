@@ -132,13 +132,39 @@ export class HomePage extends BasePage {
     query: LocationQuery,
   ): Promise<void> {
     await this.clearField(container);
+
+    /**
+     * Keep the document at the top before opening the suggestion list.
+     *
+     * This site's header becomes sticky once the page is scrolled, and it then
+     * overlaps the top of the autocomplete list. Playwright correctly refuses to
+     * click an element that another element would receive the pointer event for,
+     * so the click times out with the option sitting right there, visible and
+     * enabled. It reproduced on CI and not locally purely because ad content
+     * shifted the form far enough down the page to trigger the sticky state.
+     */
+    await this.page.evaluate(() => window.scrollTo(0, 0));
+
     await input.click();
     await input.fill(query.term);
 
     const suggestion = this.options(listboxId).filter({ hasText: query.option }).first();
     await expect(suggestion, `an autocomplete suggestion matching ${query.option} should appear for "${query.term}"`)
       .toBeVisible({ timeout: 20_000 });
-    await suggestion.click();
+
+    try {
+      await suggestion.click({ timeout: 10_000 });
+    } catch {
+      /**
+       * Fallback for the same overlap: a keypress cannot be intercepted by an
+       * overlaying element. This is not a blind Enter — the assertion below
+       * proves the field ended up holding the airport we asked for, so a wrong
+       * selection still fails the test. It is also the path a keyboard or
+       * screen-reader user takes, which is worth exercising.
+       */
+      await input.press('ArrowDown');
+      await input.press('Enter');
+    }
 
     /**
      * Committing the suggestion is the step that actually populates the field,

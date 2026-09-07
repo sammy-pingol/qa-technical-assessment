@@ -189,25 +189,19 @@ persistence untyped and unsanitised.
 
 ## CI
 
-`.github/workflows/ci.yml` splits the two suites deliberately:
+`.github/workflows/ci.yml` runs the **API suite** and the **web suite** on every
+push and pull request, and both again nightly. The nightly run exists because a
+live third-party target can break the suite without anyone touching this
+repository. The web job runs with a single worker — this is someone else's
+production site, and concurrent searches from one datacenter IP are what a rate
+limiter exists to stop. HTML reports upload as artifacts from both jobs.
 
-| Suite | Runs on | Why |
-|-------|---------|-----|
-| **API** | every push and pull request | Deterministic, owns its data, ~7s. This is the real gate. |
-| **Web** | nightly + manual dispatch | Drives a live commercial site behind a WAF, with A/B tested layouts and geolocated content. |
-
-**Why the web suite does not gate every push.** A pipeline gate should answer
-"did this change break something?". A suite whose result also depends on a third
-party's availability, rate limiting and experiment bucketing cannot answer that:
-a red build tells you nothing about the commit. And a gate that goes red for
-reasons outside the author's control gets routinely overridden, at which point it
-has stopped being a gate.
-
-This is observed, not theoretical: the suite passes locally under CI settings
-(29 passed, 0 failed) and intermittently fails from a GitHub runner with no code
-change in between. So it runs on a cadence where a failure is **triaged** rather
-than **blocking**, with traces uploaded for exactly that purpose. It can be run
-on demand from the Actions tab at any time.
-
-If this were our own application on our own infrastructure, it would gate every
-push. HTML reports upload as artifacts from both jobs.
+**A note on one failure worth recording.** The web suite once passed locally and
+failed on CI. The tempting conclusion was "third-party flakiness, move it off the
+gate", and that change was briefly made. The trace said otherwise: Playwright had
+found the autocomplete option, confirmed it visible and stable, and then refused
+to click it because the site's sticky header was intercepting the pointer event.
+A real robustness bug, reproducible once you knew to look — fixed by keeping the
+document scrolled to the top before opening the list, with a keyboard fallback.
+The suite went back on the gate. Assuming flakiness is how a real defect gets
+filed as noise.
