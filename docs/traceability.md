@@ -15,6 +15,7 @@ Assessment requirement → test case → implementing spec.
 | 2d — DeleteBooking with response field assertions | TC-A-040 … TC-A-046 | `tests/api/delete-booking.spec.ts` |
 | — Auth (precondition for 2b and 2d) | TC-A-001 … TC-A-003 | `tests/api/auth.spec.ts` |
 | — Response-time budgets (beyond the brief) | TC-A-050 … TC-A-052 | `tests/api/performance.spec.ts` |
+| — Executable defect report (beyond the brief) | DEFECT-001 … DEFECT-012 | `tests/api/known-defects.spec.ts` |
 
 ## "MUST HAVES" coverage
 
@@ -27,17 +28,21 @@ Assessment requirement → test case → implementing spec.
 
 ## Defect traceability
 
-| Defect | Raised by |
-|--------|-----------|
-| DEFECT-001 | TC-A-010 |
-| DEFECT-002 | TC-A-040 |
-| DEFECT-003 | TC-A-045 |
-| DEFECT-004 | TC-A-014 |
-| DEFECT-005 | TC-A-016 |
-| DEFECT-006 | TC-A-017 |
-| DEFECT-007 | TC-A-018 |
-| DEFECT-008 | TC-A-019 |
-| DEFECT-009 | TC-A-002 |
-| DEFECT-010 | TC-A-023 |
-| DEFECT-011 | TC-A-034 |
-| DEFECT-012 | TC-A-026 |
+Each defect is covered twice: the functional test that pins the current
+behaviour, and the `test.fail()` case in `tests/api/known-defects.spec.ts` that
+asserts the correct behaviour.
+
+| Defect | Pinned by (actual behaviour) | Asserted correct by |
+|--------|------------------------------|---------------------|
+| DEFECT-001 | TC-A-010 | `known-defects.spec.ts` DEFECT-001 |
+| DEFECT-002 | TC-A-040 | `known-defects.spec.ts` DEFECT-002 |
+| DEFECT-003 | TC-A-045 | `known-defects.spec.ts` DEFECT-003 |
+| DEFECT-004 | TC-A-014 | `known-defects.spec.ts` DEFECT-004 |
+| DEFECT-005 | TC-A-016 | `known-defects.spec.ts` DEFECT-005 |
+| DEFECT-006 | TC-A-017 | `known-defects.spec.ts` DEFECT-006 |
+| DEFECT-007 | TC-A-018 | `known-defects.spec.ts` DEFECT-007 |
+| DEFECT-008 | TC-A-019 | `known-defects.spec.ts` DEFECT-008 |
+| DEFECT-009 | TC-A-002 | `known-defects.spec.ts` DEFECT-009 |
+| DEFECT-010 | TC-A-023 | `known-defects.spec.ts` DEFECT-010 |
+| DEFECT-011 | TC-A-034 | `known-defects.spec.ts` DEFECT-011 |
+| DEFECT-012 | TC-A-026 | `known-defects.spec.ts` DEFECT-012 |

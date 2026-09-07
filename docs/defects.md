@@ -5,11 +5,26 @@ directly against `https://restful-booker.herokuapp.com` with `curl` before it wa
 written up, and every one is referenced from the automated test that covers it
 (the id also appears as an annotation in the Playwright HTML report).
 
-**Testing approach note.** The suite asserts the *actual* behaviour, not the
-correct behaviour, so it stays green and works as a regression net. Each
-deviation is flagged with `flagDefect()` at the point of assertion. If any of
-these are fixed upstream, the corresponding test fails loudly and forces a
-review — which is the behaviour you want from a regression suite.
+**Every defect below is executable.** Two suites cover them from opposite sides:
+
+| Suite | Asserts | Purpose |
+|-------|---------|---------|
+| The functional specs | what the API does **today**, with a `flagDefect()` annotation naming the deviation | A regression net — a silent behaviour change fails a test |
+| `tests/api/known-defects.spec.ts` | what the API **should** do, each marked `test.fail()` | Documents the correct contract, and goes red the day a defect is fixed |
+
+Why both. Asserting only the correct behaviour would leave twelve permanently
+red tests, and a suite that is always red gets ignored — at which point it
+catches nothing. Asserting only the actual behaviour writes the bug into the
+test, so a stranger reading `toBe(200)` sees a test that endorses it.
+
+`test.fail()` resolves this. Playwright treats a test marked expected-to-fail as
+passing while it fails, and reports it as a **failure if it ever passes**. So the
+build stays green today, the assertions state the correct contract, and the
+moment any of these is fixed upstream the build goes red and forces someone to
+retire the workaround.
+
+This was verified rather than assumed: temporarily changing DEFECT-001 to assert
+the actual `200` made the run report `1 failed`.
 
 Severity uses: **High** — data loss, corruption or a security exposure.
 **Medium** — a contract violation a client must work around. **Low** — cosmetic

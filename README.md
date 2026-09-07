@@ -39,23 +39,42 @@ No configuration is required — both base URLs have working defaults. Copy
 Last full run — `npm test`, Chromium, macOS, 3 workers:
 
 ```
-  72 passed
-   5 skipped
+  85 passed
+   4 skipped
    0 failed
-  (3.4 minutes)
+  (2.7 minutes)
 ```
 
-77 executions across three projects: **37 API** tests (no browser, ~7s), **30 web**
+89 executions across three projects: **49 API** tests (no browser, ~8s), **30 web**
 tests, and **10 of the header tests re-run against a Pixel 5 profile**.
 
-The five skips are deliberate and each names its reason in the report:
+**81 documented cases** — 32 web, 37 API, and 12 executable defect cases. 27 are
+negative.
+
+The four skips are deliberate and each names its reason in the report:
 
 | Skipped | Why |
 |---------|-----|
 | TC-W-004, TC-W-005, TC-W-009 (mobile only) | The account control collapses into the navigation drawer at mobile width, so "Sign in is flush right of the logo" is not meaningful there. TC-W-009 resizes to 375px, which the mobile project is already at. |
-| TC-W-041, TC-W-046 | The results page is A/B tested. One variant ships no "N of M flights" counter and no desktop Direct filter. Skipping with a named reason is honest; asserting a control the product does not always ship would be a false failure. |
+| TC-W-041 or TC-W-046 | The results page is A/B tested. One variant ships no "N of M flights" counter and no desktop Direct filter; whichever is absent on the run skips with a named reason. Asserting a control the product does not always ship would be a false failure. |
 
-**69 documented test cases** — 32 web, 37 API — of which 27 are negative.
+### Why the run is green when twelve defects are open
+
+Two suites cover the defects from opposite sides:
+
+- The **functional specs** assert what the API does *today*, each carrying a
+  `flagDefect()` annotation that surfaces in the HTML report. They are the
+  regression net: a silent behaviour change fails a test.
+- **`tests/api/known-defects.spec.ts`** asserts what the API *should* do, each
+  case marked `test.fail()`. They fail today — which is the point — and are
+  reported as expected failures, so the run stays green.
+
+The payoff is the third state: if a defect is fixed upstream, its test starts
+passing, and Playwright reports an expected-failure-that-passed **as a failure**.
+The build goes red and forces someone to retire the workaround.
+
+Verified rather than assumed: temporarily changing DEFECT-001 to assert the
+actual `200` made the run report `1 failed`.
 
 ---
 

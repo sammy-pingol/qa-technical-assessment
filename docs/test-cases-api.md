@@ -85,3 +85,27 @@ to an agreed SLO and assert a percentile across many calls rather than one sampl
 | TC-A-050 | P | Auth responds within budget | POST /auth, timed | 200, and under the 6s write budget |
 | TC-A-051 | P | Create responds within budget | POST /booking, timed | Succeeds, and under the 6s write budget |
 | TC-A-052 | P | Read responds within budget, and faster than the write | Seed a booking timed, then GET it timed | 200, under the 4s read budget, and not slower than the write that created it |
+
+## Known defects — asserting the behaviour the API should have
+File: `tests/api/known-defects.spec.ts`
+
+Twelve cases, one per defect, each asserting the CORRECT behaviour and marked
+`test.fail()`. They fail today (that is the point) and are reported as expected
+failures, so the run stays green. If any defect is fixed upstream its test starts
+passing, which Playwright reports as a failure — the build goes red and the
+workaround gets retired.
+
+| ID | Asserts the API should… | Actual |
+|----|-------------------------|--------|
+| DEFECT-001 | return `201 Created` from POST /booking | 200 |
+| DEFECT-002 | return `200`/`204` from DELETE | 201 "Created" |
+| DEFECT-003 | return `404` on a repeat DELETE (idempotency) | 405 |
+| DEFECT-004 | return `400` for a payload missing required fields | 500 |
+| DEFECT-005 | reject wrongly typed fields | 200, `totalprice` nulled |
+| DEFECT-006 | reject a negative `totalprice` | 200, stored |
+| DEFECT-007 | reject a checkout before the checkin | 200, stored |
+| DEFECT-008 | not store and reflect script content verbatim | stored verbatim |
+| DEFECT-009 | return `401` for bad credentials | 200 |
+| DEFECT-010 | return `401` when no credentials are supplied | 403 |
+| DEFECT-011 | honour `Accept: application/json` on error bodies | text/plain |
+| DEFECT-012 | return `404` for a write to an unknown id | 405 |
